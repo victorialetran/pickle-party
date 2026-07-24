@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import confetti from 'canvas-confetti'
 import { listen, write, patch, erase, read, hashStr, shuffled } from './db.js'
 import { PROMPTS } from './prompts.js'
-import { Pickle, BridePickle, ACCESSORIES } from './pickles.jsx'
+import { Pickle, BridePickle, CARD_POOL, avatarFor } from './pickles.jsx'
 
 function Sparkles() {
   const items = useMemo(
@@ -33,7 +33,7 @@ function burst() {
 }
 
 function PickleCard({ pid, roundIdx, flipped, text, order }) {
-  const outfit = ACCESSORIES[hashStr(`${pid}:${roundIdx}`) % ACCESSORIES.length]
+  const outfit = CARD_POOL[hashStr(`${pid}:${roundIdx}`) % CARD_POOL.length]
   return (
     <div className={`flip-card ${flipped ? 'flipped' : ''}`} style={{ order }} data-testid={flipped ? 'card-front' : 'card-back'}>
       <div className="flip-inner">
@@ -87,12 +87,16 @@ export default function Host() {
   const [idx, setIdx] = useState(0)
   const [players, setPlayers] = useState({})
   const [round, setRound] = useState(null)
+  const [promptOrder, setPromptOrder] = useState(null)
   const prevState = useRef(null)
 
   useEffect(() => listen('state', (v) => setState(v ?? 'lobby')), [])
   useEffect(() => listen('currentPromptIndex', (v) => setIdx(v ?? 0)), [])
   useEffect(() => listen('players', (v) => setPlayers(v || {})), [])
+  useEffect(() => listen('promptOrder', setPromptOrder), [])
   useEffect(() => listen(`rounds/${idx}`, setRound), [idx])
+
+  const currentPrompt = PROMPTS[promptOrder?.[idx] ?? idx]
 
   // confetti on reveal & finish
   useEffect(() => {
@@ -106,7 +110,11 @@ export default function Host() {
   const allIn = playerCount > 0 && submittedIds.length >= playerCount
 
   async function startGame() {
-    await patch('', { state: 'collecting', currentPromptIndex: 0 })
+    await patch('', {
+      state: 'collecting',
+      currentPromptIndex: 0,
+      promptOrder: shuffled([...PROMPTS.keys()]),
+    })
   }
 
   async function reveal() {
@@ -127,7 +135,7 @@ export default function Host() {
     if (!window.confirm('Reset the whole game? Players, scores and answers will all be cleared — everyone rejoins via the link. 🥒')) return
     await erase('rounds')
     await erase('players')
-    await patch('', { state: 'lobby', currentPromptIndex: 0 })
+    await patch('', { state: 'lobby', currentPromptIndex: 0, promptOrder: null })
   }
 
   const playerUrl = `${window.location.origin}${import.meta.env.BASE_URL}`
@@ -168,7 +176,7 @@ export default function Host() {
               <div className="lobby-grid" data-testid="lobby-grid">
                 {Object.entries(players).map(([pid, p]) => (
                   <div className="lobby-player" key={pid}>
-                    <Pickle accessory={ACCESSORIES[hashStr(pid) % ACCESSORIES.length]} size={80} />
+                    <Pickle accessory={avatarFor(p.name, pid)} size={80} />
                     <span className="p-name">{p.name}</span>
                   </div>
                 ))}
@@ -181,7 +189,7 @@ export default function Host() {
             <>
               <div className="host-prompt">
                 <div className="prompt-chip">{state === 'collecting' ? 'Answers coming in…' : 'The pickles have spoken'}</div>
-                <p className="prompt-text" data-testid="host-prompt">{PROMPTS[idx]}</p>
+                <p className="prompt-text" data-testid="host-prompt">{currentPrompt}</p>
               </div>
               {state === 'collecting' && (
                 <div className="submit-count" data-testid="submit-count">

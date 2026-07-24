@@ -1,7 +1,17 @@
 import React from 'react'
+import { hashStr } from './db.js'
 
 // Cute pickle characters with bachelorette accessories, drawn as inline SVG.
 export const ACCESSORIES = ['veil', 'tiara', 'hearts', 'bow', 'cowboy', 'boa', 'crown']
+
+// The veil is reserved for the bride: it never appears on anonymous answer
+// cards or on other players' avatars, so a veiled pickle always means Miranda.
+export const CARD_POOL = ACCESSORIES.filter((a) => a !== 'veil')
+
+export function avatarFor(name, playerId) {
+  if ((name || '').toLowerCase().includes('miranda')) return 'veil'
+  return CARD_POOL[hashStr(playerId) % CARD_POOL.length]
+}
 
 function Accessory({ kind }) {
   switch (kind) {
@@ -78,7 +88,7 @@ function Accessory({ kind }) {
 
 export function Pickle({ accessory = 'none', size = 90, wink = false }) {
   return (
-    <svg viewBox="0 0 120 160" width={size} height={(size * 160) / 120} aria-hidden="true">
+    <svg viewBox="0 0 120 160" width={size} height={(size * 160) / 120} aria-hidden="true" data-accessory={accessory}>
       {/* body */}
       <path
         d="M60 14 C88 14 96 46 94 84 C92 122 82 150 60 150 C38 150 28 122 26 84 C24 46 32 14 60 14 Z"

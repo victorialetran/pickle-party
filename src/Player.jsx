@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { listen, write, read, hashStr } from './db.js'
+import { listen, write, read } from './db.js'
 import { PROMPTS } from './prompts.js'
-import { Pickle, ACCESSORIES } from './pickles.jsx'
+import { Pickle, avatarFor } from './pickles.jsx'
 
 const MAX_LEN = 140
 
@@ -42,6 +42,7 @@ export default function Player() {
   const [state, setState] = useState(null)
   const [idx, setIdx] = useState(0)
   const [mySub, setMySub] = useState(null)
+  const [promptOrder, setPromptOrder] = useState(null)
   const [nameDraft, setNameDraft] = useState('')
   const [answerDraft, setAnswerDraft] = useState('')
   const [editing, setEditing] = useState(false)
@@ -51,6 +52,7 @@ export default function Player() {
   useEffect(() => listen('state', (v) => setState(v ?? 'lobby')), [])
   useEffect(() => listen('currentPromptIndex', (v) => setIdx(v ?? 0)), [])
   useEffect(() => listen(`rounds/${idx}/submissions/${playerId}`, setMySub), [idx, playerId])
+  useEffect(() => listen('promptOrder', setPromptOrder), [])
 
   // New round → clear the local draft & editing flag
   useEffect(() => {
@@ -58,7 +60,7 @@ export default function Player() {
     setEditing(false)
   }, [idx])
 
-  const myAvatar = ACCESSORIES[hashStr(playerId) % ACCESSORIES.length]
+  const myAvatar = avatarFor(me?.name, playerId)
 
   async function join(e) {
     e.preventDefault()
@@ -172,7 +174,7 @@ export default function Player() {
   }
 
   // ── Collecting ──
-  const prompt = PROMPTS[idx] || ''
+  const prompt = PROMPTS[promptOrder?.[idx] ?? idx] || ''
   const submitted = mySub && !editing
 
   if (submitted) {

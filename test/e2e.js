@@ -1,12 +1,13 @@
 // End-to-end test: 1 host screen + 6 phones through the full game.
 import { chromium } from 'playwright-core'
 import fs from 'node:fs'
+import { PROMPTS } from '../src/prompts.js'
 
 const BASE = 'http://localhost:5173'
 const SHOTS = new URL('./shots/', import.meta.url).pathname
 fs.mkdirSync(SHOTS, { recursive: true })
 
-const NAMES = ['Victoria', 'Jess', 'Amy', 'Lauren', 'Priya', 'Sam']
+const NAMES = ['Victoria', 'Jess', 'Amy', 'Miranda', 'Priya', 'Sam']
 const ANSWERS = [
   'Her 47 tabs open at all times',
   'Never forgets a birthday',
@@ -70,6 +71,10 @@ await host.waitForTimeout(600)
 const lobbyCount = await host.locator('.lobby-player').count()
 check('lobby shows 7 joined players', lobbyCount === 7)
 check('duplicate name became Jess (2)', (await host.locator('.lobby-player .p-name', { hasText: 'Jess (2)' }).count()) === 1)
+check('exactly one veil pickle in lobby (the bride)', (await host.locator('.lobby-player svg[data-accessory="veil"]').count()) === 1)
+const mirandaPhone = phones.find((p) => p.name === 'Miranda').page
+check('Miranda phone shows veil pickle', (await mirandaPhone.locator('svg[data-accessory="veil"]').count()) === 1)
+check('Victoria phone has no veil pickle', (await phones[0].page.locator('svg[data-accessory="veil"]').count()) === 0)
 await host.screenshot({ path: `${SHOTS}1-lobby.png` })
 await phones[0].page.screenshot({ path: `${SHOTS}0-phone-joined.png` })
 
@@ -81,8 +86,11 @@ await dupPage.evaluate(() => {
 // ── start game ──
 await host.click('[data-testid="start-btn"]')
 await host.waitForTimeout(600)
-check('host shows prompt 1', (await host.locator('[data-testid="host-prompt"]').innerText()).includes('red flag'))
-check('phone shows prompt 1', (await phones[0].page.locator('.prompt-text').innerText()).includes('red flag'))
+const seenPrompts = new Set()
+const prompt1 = (await host.locator('[data-testid="host-prompt"]').innerText()).trim()
+seenPrompts.add(prompt1)
+check('host shows a valid prompt from the list', PROMPTS.includes(prompt1))
+check('phone shows the same prompt as host', (await phones[0].page.locator('.prompt-text').innerText()).trim() === prompt1)
 await phones[0].page.screenshot({ path: `${SHOTS}2-phone-prompt.png` })
 
 // ── round 1: submissions arrive one by one ──
@@ -94,6 +102,7 @@ for (let i = 0; i < phones.length; i++) {
 }
 await host.waitForTimeout(700)
 check('host shows 6 face-down cards', (await host.locator('[data-testid="card-back"]').count()) === 6)
+check('no veil pickle on anonymous cards', (await host.locator('[data-testid="card-back"] svg[data-accessory="veil"]').count()) === 0)
 check('submit counter says 6 of 7', (await host.locator('[data-testid="submit-count"]').innerText()).includes('6 of 7'))
 check('no answer text visible before reveal', !(await host.content()).includes(ANSWERS[0]))
 await host.screenshot({ path: `${SHOTS}3-collecting.png` })
@@ -133,7 +142,9 @@ check('Sam score is -1', samRow.trim() === '-1')
 // ── next prompt ──
 await host.click('[data-testid="next-btn"]')
 await host.waitForTimeout(600)
-check('host shows prompt 2', (await host.locator('[data-testid="host-prompt"]').innerText()).includes('green flag'))
+const prompt2 = (await host.locator('[data-testid="host-prompt"]').innerText()).trim()
+seenPrompts.add(prompt2)
+check('prompt 2 is a different valid prompt', PROMPTS.includes(prompt2) && prompt2 !== prompt1)
 check('round chip says 2 of 20', (await host.locator('[data-testid="round-chip"]').innerText()).includes('2 of 20'))
 check('phone shows prompt 2 with empty box', (await phones[0].page.locator('.answer-input').inputValue()) === '')
 
@@ -153,12 +164,14 @@ for (let r = 1; r < 20; r++) {
     }
   }
   await host.waitForTimeout(150)
+  seenPrompts.add((await host.locator('[data-testid="host-prompt"]').innerText()).trim())
   await host.click('[data-testid="reveal-btn"]')
   await host.waitForTimeout(250)
   await host.click('[data-testid="next-btn"]')
   await host.waitForTimeout(250)
 }
 await host.waitForTimeout(800)
+check('all 20 prompts appeared exactly once (shuffled)', seenPrompts.size === 20)
 check('winner stage shown after 20 rounds', (await host.locator('[data-testid="winner-stage"]').count()) === 1)
 check('winner is Victoria', (await host.locator('.winner-name').innerText()).includes('Victoria'))
 check('phone shows game over', (await phones[0].page.content()).includes("That's a wrap"))
