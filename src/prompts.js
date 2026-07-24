@@ -1,0 +1,23 @@
+// The 20 prompts, played in order. Edit freely — keep exactly one string per prompt.
+export const PROMPTS = [
+  "Miranda's biggest red flag",
+  "Miranda's biggest green flag",
+  'The reason Miranda would most likely go viral',
+  'If Miranda had a Netflix show, what would it be?',
+  'Worst person to invite to the bachelorette trip',
+  'The most San Jose thing',
+  'The bride would impulse buy this.',
+  "The first thing you'd pack for this bachelorette.",
+  'Something that gets better after a few drinks.',
+  'What you dream of happening this bachelorette trip',
+  'The unofficial mascot of this bachelorette.',
+  'The fastest way to lose your bridesmaid duties.',
+  "Something you'd never want to hear on your wedding day.",
+  'The DJ at the wedding absolutely should not play ____',
+  'The group should take a shot whenever ____.',
+  "Something you definitely shouldn't text your ex.",
+  'Something weirdly attractive',
+  'What challenge would Miranda win on Love Island?',
+  'The signature cocktail at the wedding should be named ____.',
+  'Pairs surprisingly well with red wine.',
+]

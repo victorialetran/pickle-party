@@ -1,0 +1,12 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "games": {
+      "pickle-party": {
+        ".read": true,
+        ".write": true
+      }
+    }
+  }
+}
