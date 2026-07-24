@@ -124,11 +124,10 @@ export default function Host() {
   }
 
   async function resetGame() {
-    if (!window.confirm('Reset the whole game? Scores and answers will be cleared. 🥒')) return
+    if (!window.confirm('Reset the whole game? Players, scores and answers will all be cleared — everyone rejoins via the link. 🥒')) return
     await erase('rounds')
-    const updates = { state: 'lobby', currentPromptIndex: 0 }
-    for (const pid of Object.keys(players)) updates[`players/${pid}/score`] = 0
-    await patch('', updates)
+    await erase('players')
+    await patch('', { state: 'lobby', currentPromptIndex: 0 })
   }
 
   const playerUrl = `${window.location.origin}${import.meta.env.BASE_URL}`
