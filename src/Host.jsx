@@ -32,10 +32,17 @@ function burst() {
   setTimeout(() => confetti({ particleCount: 80, spread: 110, origin: { y: 0.4 }, colors }), 350)
 }
 
-function PickleCard({ pid, roundIdx, flipped, text, order }) {
+function PickleCard({ pid, roundIdx, flipped, text, order, clickable, isWinner, justPicked, onPick }) {
   const outfit = CARD_POOL[hashStr(`${pid}:${roundIdx}`) % CARD_POOL.length]
   return (
-    <div className={`flip-card ${flipped ? 'flipped' : ''}`} style={{ order }} data-testid={flipped ? 'card-front' : 'card-back'}>
+    <div
+      className={`flip-card ${flipped ? 'flipped' : ''} ${clickable ? 'clickable' : ''} ${isWinner ? 'winner-card' : ''}`}
+      style={{ order }}
+      data-testid={flipped ? 'card-front' : 'card-back'}
+      onClick={clickable ? onPick : undefined}
+    >
+      {isWinner && <div className="winner-badge" data-testid="winner-badge">👑</div>}
+      {justPicked && <div className="plus-one">+1 💖</div>}
       <div className="flip-inner">
         <div className="flip-face flip-back-face">
           <span className="card-sparkle" style={{ top: 10, left: 12 }}>✨</span>
@@ -88,6 +95,7 @@ export default function Host() {
   const [players, setPlayers] = useState({})
   const [round, setRound] = useState(null)
   const [promptOrder, setPromptOrder] = useState(null)
+  const [justPicked, setJustPicked] = useState(null)
   const prevState = useRef(null)
 
   useEffect(() => listen('state', (v) => setState(v ?? 'lobby')), [])
@@ -129,6 +137,33 @@ export default function Host() {
     } else {
       await patch('', { state: 'collecting', currentPromptIndex: idx + 1 })
     }
+  }
+
+  async function pickWinner(pid, e) {
+    const prevWinner = round?.winner
+    const updates = {}
+    if (prevWinner === pid) {
+      // tap the crowned card again → un-pick, take the point back
+      updates[`rounds/${idx}/winner`] = null
+      updates[`players/${pid}/score`] = (players[pid]?.score ?? 0) - 1
+    } else {
+      updates[`rounds/${idx}/winner`] = pid
+      updates[`players/${pid}/score`] = (players[pid]?.score ?? 0) + 1
+      if (prevWinner && players[prevWinner]) {
+        // moving the crown → previous winner gives the point back
+        updates[`players/${prevWinner}/score`] = (players[prevWinner].score ?? 0) - 1
+      }
+      confetti({
+        particleCount: 70,
+        spread: 70,
+        startVelocity: 28,
+        origin: { x: e.clientX / window.innerWidth, y: e.clientY / window.innerHeight },
+        colors: ['#ff3e8f', '#ff80ab', '#ffd54f', '#7cb342', '#ffffff'],
+      })
+      setJustPicked(pid)
+      setTimeout(() => setJustPicked(null), 1000)
+    }
+    await patch('', updates)
   }
 
   async function resetGame() {
@@ -188,7 +223,9 @@ export default function Host() {
           {(state === 'collecting' || state === 'revealed') && (
             <>
               <div className="host-prompt">
-                <div className="prompt-chip">{state === 'collecting' ? 'Answers coming in…' : 'The pickles have spoken'}</div>
+                <div className="prompt-chip">
+                  {state === 'collecting' ? 'Answers coming in…' : 'The pickles have spoken — tap the winner! 👑'}
+                </div>
                 <p className="prompt-text" data-testid="host-prompt">{currentPrompt}</p>
               </div>
               {state === 'collecting' && (
@@ -204,7 +241,18 @@ export default function Host() {
                 {state === 'revealed' &&
                   (round?.revealOrder || []).map((pid, i) =>
                     submissions[pid] ? (
-                      <PickleCard key={`${idx}:${pid}`} pid={pid} roundIdx={idx} flipped text={submissions[pid].text} order={i} />
+                      <PickleCard
+                        key={`${idx}:${pid}`}
+                        pid={pid}
+                        roundIdx={idx}
+                        flipped
+                        text={submissions[pid].text}
+                        order={i}
+                        clickable
+                        isWinner={round?.winner === pid}
+                        justPicked={justPicked === pid}
+                        onPick={(e) => pickWinner(pid, e)}
+                      />
                     ) : null
                   )}
               </div>

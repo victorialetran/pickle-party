@@ -209,7 +209,47 @@ button:active { transform: scale(0.96); }
 }
 
 /* flip cards */
-.flip-card { perspective: 900px; width: 190px; height: 230px; animation: popIn 0.5s cubic-bezier(0.2, 1.6, 0.4, 1); }
+.flip-card { perspective: 900px; width: 190px; height: 230px; animation: popIn 0.5s cubic-bezier(0.2, 1.6, 0.4, 1); position: relative; transition: transform 0.15s ease; }
+.flip-card.clickable { cursor: pointer; }
+.flip-card.clickable:hover { transform: translateY(-6px); }
+.flip-card.clickable:active { transform: translateY(-2px) scale(0.97); }
+.flip-card.winner-card { animation: winnerPop 0.55s cubic-bezier(0.2, 1.6, 0.4, 1); }
+.flip-card.winner-card .flip-front-face {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 4px rgba(255, 213, 79, 0.55), 0 10px 26px rgba(249, 168, 37, 0.4);
+  background: linear-gradient(160deg, #fffdf4, #fff6d9);
+}
+@keyframes winnerPop {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.12) rotate(-2deg); }
+  70% { transform: scale(0.98) rotate(1deg); }
+  100% { transform: scale(1); }
+}
+.winner-badge {
+  position: absolute;
+  top: -20px;
+  right: -12px;
+  font-size: 2rem;
+  z-index: 3;
+  filter: drop-shadow(0 3px 5px rgba(173, 20, 87, 0.35));
+  animation: popIn 0.4s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+.plus-one {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  z-index: 3;
+  font-weight: 700;
+  font-size: 1.4rem;
+  color: var(--deep-pink);
+  text-shadow: 0 2px 0 #fff;
+  pointer-events: none;
+  animation: floatUp 1s ease-out forwards;
+}
+@keyframes floatUp {
+  from { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  to { opacity: 0; transform: translate(-50%, -52px) scale(1.5); }
+}
 @keyframes popIn {
   from { transform: scale(0.2) translateY(40px); opacity: 0; }
   to { transform: scale(1) translateY(0); opacity: 1; }

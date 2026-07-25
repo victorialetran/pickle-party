@@ -128,6 +128,23 @@ check('phone shows eyes-up screen', (await phones[0].page.content()).includes('E
 await host.screenshot({ path: `${SHOTS}5-revealed.png` })
 await phones[0].page.screenshot({ path: `${SHOTS}6-phone-eyes-up.png` })
 
+// ── judge picks a winning card ──
+const score = async (name) => (await host.locator(`[data-testid="score-${name}"] .score-val`).innerText()).trim()
+const cardWith = (text) => host.locator('[data-testid="card-front"]', { hasText: text })
+await cardWith(ANSWERS[0]).click() // Victoria's card
+await host.waitForTimeout(400)
+check('picking a card gives its owner +1', (await score('Victoria')) === '1')
+check('crown badge appears on picked card', (await host.locator('[data-testid="winner-badge"]').count()) === 1)
+await cardWith(ANSWERS[1]).click() // move crown to Jess's card
+await host.waitForTimeout(400)
+check('moving the crown transfers the point (Victoria back to 0)', (await score('Victoria')) === '0')
+check('moving the crown transfers the point (Jess now 1)', (await score('Jess')) === '1')
+check('still exactly one crown badge', (await host.locator('[data-testid="winner-badge"]').count()) === 1)
+await cardWith(ANSWERS[1]).click() // tap crowned card again → un-pick
+await host.waitForTimeout(400)
+check('un-picking takes the point back', (await score('Jess')) === '0')
+check('crown badge removed on un-pick', (await host.locator('[data-testid="winner-badge"]').count()) === 0)
+
 // ── manual scoring ──
 await host.click('[data-testid="plus-Victoria"]')
 await host.click('[data-testid="plus-Victoria"]')
